@@ -1,0 +1,451 @@
+/* --- CSS Variables for Theming --- */
+:root {
+    --bg-color: #ffffff;
+    --text-color: #212529;
+    --muted-text-color: #6c757d;
+    --border-color: #dee2e6;
+    --border-color-translucent: rgba(0, 0, 0, 0.1);
+    --subtle-bg-color: #f8f9fa;
+    --subtle-border-color: #e9ecef;
+    --editor-bg-color: #ffffff;
+    --editor-border-color: #ced4da;
+    --popover-bg-color: #ffffff;
+    --popover-border-color: rgba(0, 0, 0, .2);
+    --popover-shadow: 0 0.25rem 0.5rem rgba(0,0,0,.1);
+    --popover-close-bg: #343a40;
+    --popover-close-hover-bg: #495057;
+    --popover-close-text: #ffffff;
+    --alert-bg: #e9ecef;
+    --alert-text: #495057;
+    --alert-border: #d3d9df;
+    --button-outline-color: #6c757d;
+    --button-outline-hover-bg: #6c757d;
+    --button-outline-hover-text: #ffffff;
+    --button-danger-outline-color: #dc3545;
+    --button-danger-outline-hover-bg: #dc3545;
+    --button-danger-outline-hover-text: #ffffff;
+    --highlight-hover-bg: rgba(255, 255, 0, 0.5);
+    --comment-item-highlight-bg: #cfe2ff;
+    --selected-text-bg: #e9ecef;
+    --selected-text-color: #495057;
+    --code-block-bg: inherit;
+
+    /* Feedback Colors (keep consistent for meaning) */
+    --btn-save-bg: #198754;
+    --btn-load-bg: #0d6efd; /* Keep distinct for Load */
+    --btn-clear-bg: #dc3545;
+    --btn-copy-bg: var(--btn-primary-bg); /* NEW: Tie copy feedback to primary color */
+    --btn-feedback-text: #ffffff;
+
+    /* NEW: Reprompt Branding Color */
+    --reprompt-blue: #006D77;
+
+    /* MODIFIED: Link Color */
+    --link-color: var(--reprompt-blue);
+
+    /* NEW: Primary Button Variables */
+    --btn-primary-bg: var(--reprompt-blue);
+    --btn-primary-border: var(--reprompt-blue);
+    --btn-primary-hover-bg: #005259; /* Darker shade */
+    --btn-primary-hover-border: #00454b; /* Even darker shade */
+    --btn-primary-text: #ffffff;
+}
+
+[data-theme="dark"] {
+    --bg-color: #212529;
+    --text-color: #dee2e6;
+    --muted-text-color: #adb5bd;
+    --border-color: #495057;
+    --border-color-translucent: rgba(255, 255, 255, 0.1);
+    --subtle-bg-color: #343a40;
+    --subtle-border-color: #495057;
+    --editor-bg-color: #2b3035;
+    --editor-border-color: #495057;
+    --popover-bg-color: #343a40;
+    --popover-border-color: rgba(255,255,255,.25);
+    --popover-shadow: 0 0.25rem 0.5rem rgba(0,0,0,.3);
+    --popover-close-bg: #ced4da;
+    --popover-close-hover-bg: #f8f9fa;
+    --popover-close-text: #343a40;
+    --alert-bg: #343a40;
+    --alert-text: #adb5bd;
+    --alert-border: #495057;
+    --button-outline-color: #adb5bd;
+    --button-outline-hover-bg: #adb5bd;
+    --button-outline-hover-text: #212529;
+    --button-danger-outline-color: #f88a95;
+    --button-danger-outline-hover-bg: #f88a95;
+    --button-danger-outline-hover-text: #212529;
+    --highlight-hover-bg: rgba(255, 255, 100, 0.6);
+    --comment-item-highlight-bg: #4a6e9c;
+    --selected-text-bg: #495057;
+    --selected-text-color: #dee2e6;
+    --code-block-bg: #343a40;
+
+    /* MODIFIED: Keep lighter blue for links for contrast */
+    --link-color: #6ea8fe;
+
+    /* Feedback Colors */
+    --btn-save-bg: #198754;
+    --btn-load-bg: #0d6efd; /* Keep distinct for Load */
+    --btn-clear-bg: #dc3545;
+    --btn-copy-bg: var(--btn-primary-bg); /* Tie copy feedback to primary color */
+    --btn-feedback-text: #ffffff;
+
+    /* MODIFIED: Use Reprompt Blue for primary button, darker shades for hover */
+    --btn-primary-bg: var(--reprompt-blue);
+    --btn-primary-border: var(--reprompt-blue);
+    --btn-primary-hover-bg: #005259; /* Darker shade */
+    --btn-primary-hover-border: #00454b; /* Even darker shade */
+    --btn-primary-text: #ffffff;
+}
+
+/* --- Apply Variables --- */
+html, body {
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+body {
+    display: flex;
+    flex-direction: column;
+}
+.top-bar {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+.title-switch-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+/* NEW: Logo Styles */
+#app-logo {
+    max-height: 40px; /* Adjust height as needed */
+    width: auto;
+    vertical-align: middle;
+}
+.dark-mode-switch-container {
+    font-size: 0.8rem;
+}
+.dark-mode-switch-container .form-check-label {
+    color: var(--muted-text-color);
+    cursor: pointer;
+}
+.dark-mode-switch-container .form-switch .form-check-input {
+    cursor: pointer;
+}
+.main-content-row {
+    flex-grow: 1;
+    overflow: hidden;
+    height: 100%;
+}
+#editor-container {
+    border: 1px solid var(--editor-border-color);
+    border-radius: 0.375rem;
+    height: 100%;
+    overflow-y: auto;
+    background-color: var(--editor-bg-color);
+    position: relative;
+}
+#editor-content {
+    padding: 10px;
+    white-space: pre-wrap;
+    font-family: sans-serif;
+    line-height: 1.5;
+    min-height: 100%;
+    outline: none;
+    position: relative;
+    color: var(--text-color);
+}
+#editor-content code, #editor-content pre, #editor-content kbd, #editor-content samp {
+    background-color: var(--code-block-bg);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+}
+
+.instructions-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-left: 0.5rem;
+}
+#commentList {
+    border: 1px solid var(--subtle-border-color);
+    border-radius: 0.375rem;
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+    background-color: var(--subtle-bg-color);
+}
+#commentList .list-group-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0.3rem 0.75rem;
+    background-color: transparent;
+    border-bottom: 1px solid var(--subtle-border-color);
+    color: var(--text-color);
+}
+#commentList .list-group-item:last-child {
+    border-bottom: none;
+}
+.color-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    /* background-color set inline */
+    margin-right: 6px;
+    margin-top: 4px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color-translucent);
+}
+#commentList .selected-text {
+    font-style: italic;
+    color: var(--selected-text-color);
+    flex-shrink: 1;
+    max-width: 35%;
+    font-size: 0.9em;
+    font-family: monospace;
+    background-color: var(--selected-text-bg);
+    padding: 2px 4px;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    line-height: 0.8;
+}
+#commentList .comment-content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    text-align: left;
+    max-width: 55%;
+}
+#commentList .comment-text {
+    font-weight: normal;
+    word-break: break-word;
+    flex-shrink: 1;
+    color: var(--text-color);
+    font-size: 0.9em;
+    text-align: left;
+    width: 100%;
+    padding-right: 5px;
+}
+#commentList .delete-comment-btn {
+    flex-shrink: 0;
+    padding: 0.1rem 0.3rem;
+    line-height: 1;
+    color: var(--muted-text-color);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    margin-left: auto;
+}
+#commentList .delete-comment-btn:hover {
+    color: var(--text-color);
+}
+#no-comments-placeholder {
+    justify-content: center !important;
+    font-style: italic;
+    color: var(--muted-text-color);
+    padding: 1rem;
+}
+h1, h2, h3, h4, h5, h6 { color: var(--text-color); }
+/* MODIFIED: Adjust h1 usage if needed after logo change */
+/* h1 { margin-bottom: 0.5rem; } */
+.lead { margin-bottom: 0.75rem; font-size: 1.1rem; color: var(--muted-text-color); }
+.alert {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--alert-bg);
+    color: var(--alert-text);
+    border: 1px solid var(--alert-border);
+}
+hr { margin: 0.75rem 0; border-top: 1px solid var(--border-color); }
+.instructions-heading { margin-bottom: 0.5rem; }
+.instructions-desc { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--muted-text-color); }
+
+/* Button Styles using Variables */
+/* MODIFIED: btn-primary styles updated to use variables */
+.btn-primary {
+    background-color: var(--btn-primary-bg);
+    border-color: var(--btn-primary-border);
+    color: var(--btn-primary-text);
+    /* Add transition for smoother hover */
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--btn-primary-hover-bg);
+    border-color: var(--btn-primary-hover-border);
+    color: var(--btn-primary-text); /* Keep text color consistent */
+}
+.btn-outline-secondary {
+    color: var(--button-outline-color);
+    border-color: var(--button-outline-color);
+}
+.btn-outline-secondary:hover {
+    background-color: var(--button-outline-hover-bg);
+    color: var(--button-outline-hover-text);
+    border-color: var(--button-outline-hover-bg);
+}
+.btn-outline-danger {
+    color: var(--button-danger-outline-color);
+    border-color: var(--button-danger-outline-color);
+}
+.btn-outline-danger:hover {
+    background-color: var(--button-danger-outline-hover-bg);
+    color: var(--button-danger-outline-hover-text);
+    border-color: var(--button-danger-outline-hover-bg);
+}
+/* Feedback button styles (using specific feedback vars) */
+.btn-copy-feedback {
+    background-color: var(--btn-copy-bg) !important;
+    border-color: var(--btn-copy-bg) !important; /* Use same color for border */
+    color: var(--btn-feedback-text) !important;
+}
+.btn-save-feedback {
+    background-color: var(--btn-save-bg) !important;
+    border-color: var(--btn-save-bg) !important;
+    color: var(--btn-feedback-text) !important;
+}
+.btn-load-feedback {
+    background-color: var(--btn-load-bg) !important;
+    border-color: var(--btn-load-bg) !important;
+    color: var(--btn-feedback-text) !important;
+}
+.btn-clear-feedback {
+    background-color: var(--btn-clear-bg) !important;
+    border-color: var(--btn-clear-bg) !important;
+    color: var(--btn-feedback-text) !important;
+}
+
+.prompt-toggle-btn {
+    text-decoration: none;
+    font-size: 0.9em;
+    color: var(--link-color);
+}
+.prompt-toggle-btn:hover {
+    text-decoration: underline;
+    color: var(--link-color); /* Ensure hover keeps link color */
+}
+#promptCollapseContainer .card-body{
+    padding: 0.75rem;
+    background-color: var(--subtle-bg-color);
+    border-top: 1px solid var(--border-color);
+}
+#promptCollapseContainer textarea {
+    font-size: 0.85em;
+    font-family: monospace;
+    background-color: var(--editor-bg-color);
+    color: var(--text-color);
+    border-color: var(--editor-border-color);
+}
+#promptCollapseContainer textarea:focus {
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 0.25rem rgba(var(--link-color), 0.25); /* Needs adjustment for color variable */
+    /* TODO: Fix box-shadow color - requires RGBA version of link color */
+}
+
+/* Styles for Custom Popover & Components */
+.custom-comment-popover {
+    position: fixed;
+    z-index: 1070;
+    background-color: var(--popover-bg-color);
+    border: 1px solid var(--popover-border-color);
+    border-radius: 0.3rem;
+    box-shadow: var(--popover-shadow);
+    padding: 30px 0.75rem 0.75rem 0.75rem;
+    min-width: 250px;
+    display: none;
+}
+.custom-comment-popover textarea {
+    width: 100%;
+    font-size: 0.85em;
+    min-height: 60px;
+    background-color: var(--editor-bg-color);
+    color: var(--text-color);
+    border-color: var(--editor-border-color);
+}
+.custom-popover-close-btn {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 22px;
+    height: 22px;
+    background-color: var(--popover-close-bg);
+    color: var(--popover-close-text);
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 20px;
+    text-align: center;
+    padding: 0;
+    cursor: pointer;
+    z-index: 1;
+    transition: background-color 0.15s ease-in-out;
+}
+.custom-popover-close-btn:hover {
+    background-color: var(--popover-close-hover-bg);
+}
+.popover-instruction-text {
+    font-size: 0.75em;
+    color: var(--muted-text-color);
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--subtle-bg-color);
+    border-radius: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* --- Highlight Styles --- */
+.editor-highlight {
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+    border-radius: 2px;
+    padding: 0 1px;
+    margin: 0 -1px;
+}
+.editor-highlight:hover {
+    background-color: var(--highlight-hover-bg) !important;
+}
+.comment-item-highlighted {
+    background-color: var(--comment-item-highlight-bg) !important;
+    transition: background-color 0.1s linear;
+}
+
+/* --- Enhanced Disabled State for Action Buttons --- */
+#saveStateBtn:disabled,
+#loadStateBtn:disabled,
+#clearStateBtn:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+}
+
+/* --- Responsive Scrolling Adjustments --- */
+@media (max-width: 767.98px) {
+    html, body { height: auto; overflow-y: auto; }
+    body { overflow-x: hidden; }
+    .top-bar { padding-bottom: 0.75rem; }
+    .title-switch-container { flex-direction: column; align-items: flex-start; }
+    /* NEW: Ensure logo has margin when stacked */
+    #app-logo { margin-bottom: 0.5rem; }
+    .dark-mode-switch-container { margin-top: 0; margin-left: 0; width: 100%; text-align: left; }
+    /* End NEW */
+    .container-fluid.flex-grow-1 { overflow: visible; height: auto; margin-bottom: 1rem; }
+    .main-content-row { height: auto; overflow: visible; flex-direction: column; }
+    .main-content-row > div[class^="col-"] { height: auto; max-width: 100%; width: 100%; flex-basis: auto; margin-bottom: 1.5rem; }
+    .main-content-row > div[class^="col-"]:last-child { margin-bottom: 0; }
+    #editor-container { max-height: 50vh; height: auto; min-height: 200px; overflow-y: auto; }
+    .instructions-column { height: auto; display: flex; flex-direction: column; min-height: 300px; }
+    #commentList { max-height: 45vh; min-height: 150px; overflow-y: auto; flex-grow: 1; flex-shrink: 1; }
+    .instructions-column .text-end { margin-top: 0.75rem; flex-shrink: 0; }
+}
+/* --- End Responsive Scrolling Adjustments --- */

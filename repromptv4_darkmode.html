@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light"> <!-- data-theme attribute -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reprompt.Pro Editor</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="reprompt_styles.css">
+</head>
+<body>
+<!-- Header Area -->
+<div class="container-fluid pt-3 top-bar">
+    <!-- Title and Switch Row -->
+    <div class="title-switch-container">
+        <!-- MODIFIED: Use Logo Image -->
+        <img src="reprompt_pro_logo.png" alt="Reprompt.Pro Logo" id="app-logo">
+        <!-- Dark Mode Switch -->
+        <div class="form-check form-switch dark-mode-switch-container">
+            <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+            <label class="form-check-label" for="darkModeSwitch">Dark Mode</label>
+        </div>
+    </div>
+    <!-- End Title/Switch Row -->
+    <p class="lead mb-2">Paste content on the left, select portions to add edit instructions on the right. Use Save/Load to persist work in your browser.</p>
+    <div class="alert alert-secondary py-1 px-2" role="alert">
+        <small><strong>Tip:</strong> Select content to add a comment. Use <i class="fa-solid fa-trash-can fa-xs"></i> to delete. Click highlights <span class="editor-highlight px-1" style="background-color: rgba(255, 255, 0, 0.3); cursor:default;">like this</span> to find the comment.</small>
+    </div>
+</div>
+
+<!-- Main Content Area (Editor + Instructions) -->
+<div class="container-fluid flex-grow-1 overflow-hidden mb-2">
+    <div class="row h-100 main-content-row gx-3">
+
+        <!-- Left Column: Editor (Wider) -->
+        <div class="col-md-8 h-100">
+            <div id="editor-container">
+                <div id="editor-content" contenteditable="true" spellcheck="false"></div>
+            </div>
+        </div>
+
+        <!-- Right Column: Instructions (Narrower) -->
+        <div class="col-md-4 h-100 instructions-column">
+            <h2 class="h4 instructions-heading"><i class="fa-solid fa-list-check me-2"></i>Edit Instructions</h2>
+            <p class="instructions-desc text-muted mb-1">Your instructions appear below.</p>
+
+            <!-- Editable Prompt Section -->
+            <div class="mb-2">
+                <a class="prompt-toggle-btn" data-bs-toggle="collapse" href="#promptCollapseContainer" role="button" aria-expanded="false" aria-controls="promptCollapseContainer">
+                    Customize LLM Prompt
+                    <i class="fa-solid fa-chevron-down fa-xs ms-1" id="promptCaretIcon"></i>
+                </a>
+                <div class="collapse" id="promptCollapseContainer">
+                    <div class="card card-body mt-1">
+                        <label for="llmPromptTextarea" class="form-label small mb-1">LLM Preamble:</label>
+                        <textarea class="form-control form-control-sm" id="llmPromptTextarea" rows="8"></textarea>
+                    </div>
+                </div>
+            </div>
+            <!-- End Editable Prompt Section -->
+
+            <ul class="list-group" id="commentList">
+                <!-- Placeholder or comments -->
+            </ul>
+
+            <!-- Action Buttons Area -->
+            <div class="text-end mt-auto">
+                <!-- Save/Load/Clear Buttons -->
+                <div class="btn-group mb-2 w-100" role="group" aria-label="Local Storage Actions">
+                    <button class="btn btn-outline-secondary btn-sm" id="saveStateBtn" type="button" title="Save current editor content, comments, and prompt to browser storage (Overwrites previous save). NOTHING IS EVER SENT TO THE SERVER">
+                        <i class="fa-regular fa-floppy-disk me-1"></i> Save
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="loadStateBtn" type="button" title="Load content, comments, and prompt from browser storage (Replaces current work)">
+                        <i class="fa-solid fa-upload me-1"></i> Load
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" id="clearStateBtn" type="button" title="Delete saved content, comments, and prompt from browser storage">
+                        <i class="fa-solid fa-broom me-1"></i> Clear
+                    </button>
+                </div>
+                <!-- MODIFIED: Existing Copy Button (now uses variables for color) -->
+                <button class="btn btn-primary btn-sm d-block w-100" id="copyPromptBtn" type="button">
+                    <i class="fa-regular fa-copy me-1"></i>
+                    Copy Editor Prompt
+                </button>
+            </div> <!-- End Action Buttons Area -->
+
+        </div> <!-- End Right Column -->
+
+    </div> <!-- End Row -->
+</div> <!-- End Column Container -->
+
+<!-- Custom Popover structure will be created dynamically -->
+
+<!-- JavaScript -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/js/all.min.js" integrity="sha512-b+nQTCdtTBIRIbraqNEwsjB6UvL3UEMkXnhzd8awtCYh0Kcsjl9uEgwVFVbhoj3uu1DO1ZMacNvLoyJJiNfcvg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script src="reprompt_script.js"></script>
+
+</body>
+</html>
