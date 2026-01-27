@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rental Price Optimiser</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .field {
+            flex: 1;
+            min-width: 150px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            background: linear-gradient(to right, #dc3545, #ffc107, #28a745);
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .market-label {
+            text-align: center;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .results {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px 8px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        td:first-child, th:first-child {
+            text-align: left;
+        }
+        tr.optimal {
+            background: #d4edda;
+            font-weight: 600;
+        }
+        tr.optimal td {
+            border-bottom-color: #c3e6cb;
+        }
+        tr:hover:not(.optimal) {
+            background: #f8f9fa;
+        }
+        .optimal-badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .summary {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .summary strong {
+            color: #0056b3;
+        }
+        .help {
+            font-size: 12px;
+            color: #666;
+            margin-top: 3px;
+        }
+        .negative {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rental Price Optimiser</h1>
+    <p class="subtitle">Find the optimal asking price balancing rental income vs void periods</p>
+
+    <div class="controls">
+        <div class="row">
+            <div class="field">
+                <label>Minimum Price (£)</label>
+                <input type="number" id="minPrice" value="1150" step="50">
+            </div>
+            <div class="field">
+                <label>Maximum Price (£)</label>
+                <input type="number" id="maxPrice" value="1450" step="50">
+            </div>
+            <div class="field">
+                <label>Market Rate (£)</label>
+                <input type="number" id="marketRate" value="" step="50" placeholder="Auto">
+                <div class="help">Leave blank to auto-calculate midpoint</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label>Time Horizon</label>
+                <select id="timeHorizon">
+                    <option value="18">18 months</option>
+                    <option value="36" selected>3 years</option>
+                    <option value="60">5 years</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Monthly Void Cost (£)</label>
+                <input type="number" id="voidCost" value="500" step="50">
+                <div class="help">Mortgage, council tax, insurance etc.</div>
+            </div>
+        </div>
+
+        <div class="slider-container">
+            <label>Market Conditions</label>
+            <input type="range" id="marketCondition" min="0" max="100" value="50">
+            <div class="slider-labels">
+                <span>🐻 Bear (hard to let)</span>
+                <span>Neutral</span>
+                <span>🐂 Bull (easy to let)</span>
+            </div>
+            <div class="market-label" id="conditionLabel">Neutral Market</div>
+        </div>
+
+        <button onclick="calculate()">Calculate Optimal Price</button>
+    </div>
+
+    <div class="results" id="results" style="display: none;">
+        <div class="summary" id="summary"></div>
+        <h3>Price Comparison</h3>
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Asking Price</th>
+                    <th>Monthly Let %</th>
+                    <th>Exp. Void (mo)</th>
+                    <th>Exp. Rent Income</th>
+                    <th>Exp. Void Cost</th>
+                    <th>Exp. Net Income</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Update market condition label
+        document.getElementById('marketCondition').addEventListener('input', function() {
+            const val = parseInt(this.value);
+            let label = 'Neutral Market';
+            if (val < 20) label = 'Strong Bear Market';
+            else if (val < 40) label = 'Bear Market';
+            else if (val > 80) label = 'Strong Bull Market';
+            else if (val > 60) label = 'Bull Market';
+            document.getElementById('conditionLabel').textContent = label;
+        });
+
+        // Auto-update market rate when min/max change
+        document.getElementById('minPrice').addEventListener('change', updateDefaultMarketRate);
+        document.getElementById('maxPrice').addEventListener('change', updateDefaultMarketRate);
+
+        function updateDefaultMarketRate() {
+            const marketRateInput = document.getElementById('marketRate');
+            if (!marketRateInput.value) {
+                // Keep placeholder, actual value calculated at runtime
+            }
+        }
+
+        function getMarketRate() {
+            const input = document.getElementById('marketRate');
+            if (input.value) {
+                return parseFloat(input.value);
+            }
+            // Auto-calculate: midpoint rounded to nearest £50
+            const min = parseFloat(document.getElementById('minPrice').value);
+            const max = parseFloat(document.getElementById('maxPrice').value);
+            const mid = (min + max) / 2;
+            return Math.round(mid / 50) * 50;
+        }
+
+        function calculateLetProbability(price, marketRate, marketCondition) {
+            // Base probability at market rate in neutral market: 40% per month
+            // This means ~2.5 months average void at market rate
+
+            // Market condition shifts base probability
+            // 0 (bear) = 25% base, 50 (neutral) = 40% base, 100 (bull) = 60% base
+            const baseProbability = 0.25 + (marketCondition / 100) * 0.35;
+
+            // Price effect: for every £50 below market, +8% probability
+            // For every £50 above market, -10% probability (asymmetric - overpricing hurts more)
+            const priceDiff = marketRate - price;
+            const priceSteps = priceDiff / 50;
+
+            let probability;
+            if (priceSteps >= 0) {
+                // Below or at market rate
+                probability = baseProbability + (priceSteps * 0.08);
+            } else {
+                // Above market rate
+                probability = baseProbability + (priceSteps * 0.10);
+            }
+
+            // Clamp between 5% and 95%
+            return Math.max(0.05, Math.min(0.95, probability));
+        }
+
+        function calculateExpectedOutcome(price, probability, months, voidCostPerMonth) {
+            // Calculate expected void period using geometric distribution
+            // But capped at the time horizon
+
+            let expectedVoidMonths = 0;
+            let expectedRentMonths = 0;
+            let cumulativeProbNotLet = 1;
+
+            for (let n = 1; n <= months; n++) {
+                // Probability of letting in month n = P(not let for n-1 months) * P(let)
+                const probLetInMonthN = cumulativeProbNotLet * probability;
+
+                // If let in month n, void period is (n-1) months, rent period is (months - n + 1)
+                expectedVoidMonths += probLetInMonthN * (n - 1);
+                expectedRentMonths += probLetInMonthN * (months - n + 1);
+
+                cumulativeProbNotLet *= (1 - probability);
+            }
+
+            // Add case where never let within time horizon
+            expectedVoidMonths += cumulativeProbNotLet * months;
+            // expectedRentMonths already accounts for this (adds 0)
+
+            const expectedRentIncome = expectedRentMonths * price;
+            const expectedVoidCost = expectedVoidMonths * voidCostPerMonth;
+            const expectedNetIncome = expectedRentIncome - expectedVoidCost;
+
+            return {
+                probability: probability,
+                expectedVoidMonths: expectedVoidMonths,
+                expectedRentMonths: expectedRentMonths,
+                expectedRentIncome: expectedRentIncome,
+                expectedVoidCost: expectedVoidCost,
+                expectedNetIncome: expectedNetIncome
+            };
+        }
+
+        function calculate() {
+            const minPrice = parseFloat(document.getElementById('minPrice').value);
+            const maxPrice = parseFloat(document.getElementById('maxPrice').value);
+            const marketRate = getMarketRate();
+            const months = parseInt(document.getElementById('timeHorizon').value);
+            const voidCost = parseFloat(document.getElementById('voidCost').value);
+            const marketCondition = parseInt(document.getElementById('marketCondition').value);
+
+            if (minPrice >= maxPrice) {
+                alert('Maximum price must be greater than minimum price');
+                return;
+            }
+
+            const results = [];
+
+            // Calculate for each £50 step
+            for (let price = minPrice; price <= maxPrice; price += 50) {
+                const prob = calculateLetProbability(price, marketRate, marketCondition);
+                const outcome = calculateExpectedOutcome(price, prob, months, voidCost);
+                results.push({
+                    price: price,
+                    ...outcome
+                });
+            }
+
+            // Find optimal
+            let optimalIndex = 0;
+            let maxNet = results[0].expectedNetIncome;
+            results.forEach((r, i) => {
+                if (r.expectedNetIncome > maxNet) {
+                    maxNet = r.expectedNetIncome;
+                    optimalIndex = i;
+                }
+            });
+
+            // Render results
+            const tbody = document.querySelector('#resultsTable tbody');
+            tbody.innerHTML = '';
+
+            results.forEach((r, i) => {
+                const row = document.createElement('tr');
+                if (i === optimalIndex) row.className = 'optimal';
+
+                const netClass = r.expectedNetIncome < 0 ? 'negative' : '';
+
+                row.innerHTML = `
+                    <td>£${r.price.toLocaleString()}${i === optimalIndex ? '<span class="optimal-badge">OPTIMAL</span>' : ''}</td>
+                    <td>${(r.probability * 100).toFixed(0)}%</td>
+                    <td>${r.expectedVoidMonths.toFixed(1)}</td>
+                    <td>£${r.expectedRentIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                    <td class="negative">-£${r.expectedVoidCost.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                    <td class="${netClass}">£${r.expectedNetIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Summary
+            const optimal = results[optimalIndex];
+            const horizonText = months === 18 ? '18 months' : months === 36 ? '3 years' : '5 years';
+            document.getElementById('summary').innerHTML = `
+                <strong>Optimal asking price: £${optimal.price.toLocaleString()}</strong><br>
+                Expected net income over ${horizonText}: <strong>£${optimal.expectedNetIncome.toLocaleString(undefined, {maximumFractionDigits: 0})}</strong><br>
+                Expected void period: <strong>${optimal.expectedVoidMonths.toFixed(1)} months</strong> |
+                Market rate used: <strong>£${marketRate.toLocaleString()}</strong>
+            `;
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        // Initial calculation
+        calculate();
+    </script>
+</body>
+</html>
