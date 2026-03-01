@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Super Scroller!</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { overflow: hidden; background: #000; }
+  canvas { display: block; }
+  /* High score name entry overlay */
+  #nameEntry {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.9);
+    border: 3px solid #ffcc00;
+    border-radius: 16px;
+    padding: 30px 40px;
+    text-align: center;
+    z-index: 10;
+    font-family: sans-serif;
+  }
+  #nameEntry h2 { color: #ffcc00; font-size: 28px; margin-bottom: 8px; }
+  #nameEntry .subtext { color: #fff; font-size: 20px; margin-bottom: 16px; }
+  #nameEntry input {
+    font-size: 28px; padding: 8px 16px; border-radius: 8px;
+    border: 2px solid #ffcc00; background: #111; color: #fff;
+    text-align: center; width: 200px; outline: none;
+  }
+  #nameEntry .nameButtons {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    margin-bottom: 14px;
+  }
+  #nameEntry .nameBtn {
+    font-size: 20px; padding: 6px 16px; border-radius: 8px;
+    border: 2px solid #00ffff; background: #112; color: #00ffff;
+    cursor: pointer; font-weight: bold;
+  }
+  #nameEntry .nameBtn:hover, #nameEntry .nameBtn.selected {
+    background: #00ffff; color: #000;
+  }
+  #nameEntry .orText { color: #888; font-size: 16px; margin-bottom: 10px; }
+  #nameEntry button {
+    font-size: 24px; padding: 8px 24px; margin-left: 10px;
+    border-radius: 8px; border: none; background: #ffcc00;
+    color: #000; font-weight: bold; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="nameEntry">
+  <h2>GAME OVER!</h2>
+  <div class="subtext">You scored <span id="finalScore">0</span> points!</div>
+  <div class="nameButtons" id="nameBtnList"></div>
+  <div class="orText" id="orText"></div>
+  <div><input id="playerName" maxlength="12" placeholder="New name"><button id="saveBtn">Save</button></div>
+</div>
+<script>
+// ===== CHANGE THESE TO CUSTOMIZE THE GAME! =====
+const HERO_EMOJI = "🦸‍♂️";
+const GOOD_ITEMS = [
+  { emoji: "⭐", points: 10 },
+  { emoji: "💎", points: 25 },
+  { emoji: "🧑‍🚀", points: 50 }
+];
+const BAD_ITEMS = [
+  { emoji: "💣" },
+  { emoji: "🔥" },
+  { emoji: "🛸" }
+];
+const SPAWN_RATE = 60;       // lower = more objects
+const GAME_SPEED = 1;        // how fast things scroll toward you (starts slow!)
+const BACKGROUND_COLOR = "#0a0a2e";
+const LIVES = 8;
+// ================================================
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let width, height;
+function resize() {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// High score helpers
+function getHighScores() {
+  try { return JSON.parse(localStorage.getItem("highScores")) || []; }
+  catch { return []; }
+}
+function saveHighScore(name, pts) {
+  const scores = getHighScores();
+  scores.push({ name, score: pts });
+  scores.sort((a, b) => b.score - a.score);
+  localStorage.setItem("highScores", JSON.stringify(scores.slice(0, 10)));
+}
+
+// Name entry UI
+const nameEntry = document.getElementById("nameEntry");
+const playerNameInput = document.getElementById("playerName");
+const finalScoreSpan = document.getElementById("finalScore");
+let showingScoreboard = false; // true after name is saved, shows the table
+
+document.getElementById("saveBtn").addEventListener("click", submitName);
+playerNameInput.addEventListener("keydown", e => {
+  e.stopPropagation(); // don't let game keys fire while typing
+  if (e.key === "Enter") submitName();
+});
+
+function submitName() {
+  const name = playerNameInput.value.trim() || "Player";
+  localStorage.setItem("lastName", name);
+  saveHighScore(name, score);
+  nameEntry.style.display = "none";
+  showingScoreboard = true;
+}
+
+// Build clickable buttons for all known player names
+function populateNameButtons() {
+  const btnList = document.getElementById("nameBtnList");
+  const orText = document.getElementById("orText");
+  btnList.innerHTML = "";
+  // Get unique names from high scores
+  const scores = getHighScores();
+  const names = [...new Set(scores.map(s => s.name))];
+  if (names.length === 0) { orText.textContent = ""; return; }
+  orText.textContent = "or type a new name:";
+  names.forEach(name => {
+    const btn = document.createElement("button");
+    btn.className = "nameBtn";
+    btn.textContent = name;
+    btn.addEventListener("click", () => {
+      playerNameInput.value = name;
+      submitName();
+    });
+    btnList.appendChild(btn);
+  });
+}
+
+// Game state
+let score, lives, objects, gameOver, frameCount, heroX, heroVelocity, lasers;
+let hurtMessage = "";   // shows a message when you lose a life
+let hurtTimer = 0;      // how long to show it
+let scoreSubmitted = false; // so we only show the name box once per game
+const MAX_LASERS = 52;     // total bullets per game
+let lasersLeft = MAX_LASERS;
+
+function initGame() {
+  score = 0;
+  lives = LIVES;
+  objects = [];
+  gameOver = false;
+  frameCount = 0;
+  heroX = 0.5;
+  heroVelocity = 0;
+  lasers = [];
+  hurtMessage = "";
+  hurtTimer = 0;
+  scoreSubmitted = false;
+  showingScoreboard = false;
+  lasersLeft = MAX_LASERS;
+  nameEntry.style.display = "none";
+}
+initGame();
+
+// Input handling
+const keys = {};
+window.addEventListener("keydown", e => {
+  if (e.key === " ") e.preventDefault(); // stop spacebar scrolling the page
+  keys[e.key] = true;
+  if (gameOver && showingScoreboard && (e.key === "Enter" || e.key === " ")) { initGame(); return; }
+  // Fire a laser! (if we have ammo left)
+  if (e.key === " " && !gameOver && !e.repeat && lasersLeft > 0) {
+    lasers.push({ x: heroX * width, y: height - 80 });
+    lasersLeft--;
+  }
+});
+window.addEventListener("keyup", e => { keys[e.key] = false; });
+
+// Touch controls
+canvas.addEventListener("touchstart", e => {
+  if (gameOver && showingScoreboard) { initGame(); return; }
+  if (gameOver) return;
+  const touch = e.touches[0];
+  if (touch.clientX < width / 2) keys["ArrowLeft"] = true;
+  else keys["ArrowRight"] = true;
+  e.preventDefault();
+});
+canvas.addEventListener("touchend", e => {
+  keys["ArrowLeft"] = false;
+  keys["ArrowRight"] = false;
+});
+
+// Click to restart
+canvas.addEventListener("click", () => { if (gameOver && showingScoreboard) initGame(); });
+
+// Spawn a new object flying toward the player
+function spawnObject() {
+  const isGood = Math.random() < 0.45;
+  const list = isGood ? GOOD_ITEMS : BAD_ITEMS;
+  const item = list[Math.floor(Math.random() * list.length)];
+  objects.push({
+    emoji: item.emoji,
+    points: item.points || 0,
+    isGood: isGood,
+    // Start near the vanishing point (center top area)
+    laneX: 0.15 + Math.random() * 0.7, // final X position (fraction of width)
+    z: 0,    // 0 = far away, 1 = right in front of you
+    hit: false
+  });
+}
+
+// Draw stars in the background
+function drawBackground() {
+  ctx.fillStyle = BACKGROUND_COLOR;
+  ctx.fillRect(0, 0, width, height);
+  // A few twinkling stars
+  ctx.fillStyle = "#ffffff";
+  for (let i = 0; i < 80; i++) {
+    // Deterministic star positions based on index
+    const sx = ((i * 7919) % width);
+    const sy = ((i * 6271) % height);
+    const size = (i % 3 === 0) ? 2 : 1;
+    const flicker = Math.sin(frameCount * 0.02 + i) * 0.3 + 0.7;
+    ctx.globalAlpha = flicker;
+    ctx.fillRect(sx, sy, size, size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// The main vanishing point
+function getVanishX() { return width / 2; }
+function getVanishY() { return height * 0.2; }
+
+// Convert an object's z (0-1) and laneX to screen position & scale
+function getScreenPos(obj) {
+  const vanishX = getVanishX();
+  const vanishY = getVanishY();
+  const targetX = obj.laneX * width;
+  // Interpolate from vanishing point outward
+  const screenX = vanishX + (targetX - vanishX) * obj.z;
+  const screenY = vanishY + (height - vanishY) * obj.z;
+  const scale = 0.3 + obj.z * 1.2;
+  return { x: screenX, y: screenY, scale };
+}
+
+function update() {
+  if (gameOver) return;
+  frameCount++;
+
+  // Move hero — starts slow, speeds up the longer you hold
+  const heroAccel = 0.001;
+  const heroMaxSpeed = 0.018;
+  const heroFriction = 0.85;
+  if (keys["ArrowLeft"] || keys["a"] || keys["A"]) heroVelocity -= heroAccel;
+  else if (keys["ArrowRight"] || keys["d"] || keys["D"]) heroVelocity += heroAccel;
+  else heroVelocity *= heroFriction; // slow down when not pressing
+  heroVelocity = Math.max(-heroMaxSpeed, Math.min(heroMaxSpeed, heroVelocity));
+  heroX += heroVelocity;
+  heroX = Math.max(0.05, Math.min(0.95, heroX));
+
+  // Spawn objects
+  const jitter = Math.floor(Math.random() * 20) - 10;
+  if (frameCount % (SPAWN_RATE + jitter) === 0 || (frameCount % SPAWN_RATE === 0)) {
+    spawnObject();
+  }
+
+  // Move objects toward the player (increase z)
+  const speed = GAME_SPEED * 0.006;
+  for (let i = objects.length - 1; i >= 0; i--) {
+    const obj = objects[i];
+    // Objects accelerate as they get closer (perspective feel)
+    obj.z += speed * (0.5 + obj.z * 1.5);
+
+    // Check collision when object is close to the player
+    if (!obj.hit && obj.z > 0.85) {
+      const pos = getScreenPos(obj);
+      const heroPx = heroX * width;
+      const heroPy = height - 60;
+      const dist = Math.sqrt((pos.x - heroPx) ** 2 + (pos.y - heroPy) ** 2);
+      const hitRadius = 50 * pos.scale;
+      if (dist < hitRadius) {
+        obj.hit = true;
+        if (obj.isGood) {
+          score += obj.points;
+          obj.emoji = "✨"; // little sparkle on collect
+        } else {
+          lives--;
+          obj.emoji = "💥"; // explosion on hit
+          hurtMessage = lives > 0 ? "Ouch! 💔" : "Oh no!";
+          hurtTimer = 90; // show for about 1.5 seconds
+          if (lives <= 0) gameOver = true;
+        }
+      }
+    }
+
+    // Count down the hurt message timer
+    if (hurtTimer > 0) hurtTimer--;
+
+    // Remove objects that passed behind the player
+    if (obj.z > 1.3) {
+      objects.splice(i, 1);
+    }
+  }
+
+  // Move lasers upward and check if they hit bad items
+  for (let i = lasers.length - 1; i >= 0; i--) {
+    lasers[i].y -= 10; // laser speed going up
+    // Remove if off screen
+    if (lasers[i].y < 0) { lasers.splice(i, 1); continue; }
+    // Check if laser hits a bad object
+    for (let j = objects.length - 1; j >= 0; j--) {
+      const obj = objects[j];
+      if (obj.hit || obj.isGood) continue;
+      const pos = getScreenPos(obj);
+      const dist = Math.sqrt((lasers[i].x - pos.x) ** 2 + (lasers[i].y - pos.y) ** 2);
+      if (dist < 30 * pos.scale) {
+        obj.hit = true;
+        obj.emoji = "💥";
+        score += 15; // bonus points for shooting!
+        lasers.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+
+function draw() {
+  drawBackground();
+
+  // Draw objects sorted by z (far objects first)
+  objects.sort((a, b) => a.z - b.z);
+  for (const obj of objects) {
+    const { x, y, scale } = getScreenPos(obj);
+    const fontSize = Math.floor(36 * scale);
+    ctx.font = `${fontSize}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(obj.emoji, x, y);
+  }
+
+  // Draw lasers
+  for (const laser of lasers) {
+    ctx.strokeStyle = "#00ffff";
+    ctx.lineWidth = 3;
+    ctx.shadowColor = "#00ffff";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(laser.x, laser.y);
+    ctx.lineTo(laser.x, laser.y + 20);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw the hero at the bottom
+  const heroPx = heroX * width;
+  const heroPy = height - 60;
+  ctx.font = "64px serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(HERO_EMOJI, heroPx, heroPy);
+
+  // Score display
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 32px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText(`Score: ${score}`, 20, 40);
+
+  // Lives as hearts
+  ctx.font = "30px serif";
+  ctx.fillText("❤️".repeat(lives), 20, 80);
+
+  // Ammo count
+  ctx.fillStyle = lasersLeft > 10 ? "#00ffff" : "#ff4444";
+  ctx.font = "bold 24px sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText(`Ammo: ${lasersLeft}`, width - 20, 40);
+
+  // "Ouch!" message when you lose a life
+  if (hurtTimer > 0 && hurtMessage) {
+    ctx.fillStyle = `rgba(255, 80, 80, ${Math.min(1, hurtTimer / 30)})`;
+    ctx.font = "bold 52px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(hurtMessage, width / 2, height / 2);
+  }
+
+  // Game Over — show name entry, then scoreboard
+  if (gameOver) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(0, 0, width, height);
+
+    if (!scoreSubmitted) {
+      // Show the name entry popup
+      scoreSubmitted = true;
+      finalScoreSpan.textContent = score;
+      playerNameInput.value = "";
+      populateNameButtons();
+      nameEntry.style.display = "block";
+      playerNameInput.focus();
+    }
+
+    if (showingScoreboard) {
+      // Draw the high score table on canvas
+      ctx.fillStyle = "#ffcc00";
+      ctx.font = "bold 50px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("HIGH SCORES", width / 2, height * 0.15);
+
+      const scores = getHighScores();
+      const startY = height * 0.25;
+      const lineH = 44;
+      for (let i = 0; i < scores.length; i++) {
+        const entry = scores[i];
+        const isNew = (entry.name === (playerNameInput.value.trim() || "Player") && entry.score === score);
+        ctx.fillStyle = isNew ? "#ffcc00" : "#ffffff";
+        ctx.font = `bold ${i === 0 ? 32 : 26}px sans-serif`;
+        const medal = i === 0 ? "👑 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `;
+        ctx.textAlign = "center";
+        ctx.fillText(`${medal}${entry.name} — ${entry.score}`, width / 2, startY + i * lineH);
+      }
+
+      ctx.fillStyle = "#aaaaaa";
+      ctx.font = "26px sans-serif";
+      ctx.fillText("Press Enter or tap to play again!", width / 2, startY + Math.max(scores.length, 1) * lineH + 40);
+    }
+  }
+}
+
+// Main game loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
