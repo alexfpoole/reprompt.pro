@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI in My Development Workflow — Alex Poole</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg-card: #181a20;
+  --bg-card-hover: #1e2028;
+  --border: #2a2d37;
+  --text: #c9cdd5;
+  --text-muted: #7a7f8a;
+  --text-bright: #eaedf3;
+  --accent: #6c9fff;
+  --accent-dim: rgba(108,159,255,0.12);
+  --green: #4ade80;
+  --green-dim: rgba(74,222,128,0.12);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251,191,36,0.12);
+  --red: #f87171;
+  --red-dim: rgba(248,113,113,0.12);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.12);
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.12);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --max-w: 860px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+
+/* --- Layout --- */
+.container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+section:last-of-type { border-bottom: none; }
+
+/* --- Typography --- */
+h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-bright); letter-spacing: -0.5px; }
+h2 { font-size: 1.5rem; font-weight: 700; color: var(--text-bright); margin-bottom: 8px; letter-spacing: -0.3px; }
+h3 { font-size: 1.1rem; font-weight: 600; color: var(--text-bright); margin-bottom: 6px; }
+p { margin-bottom: 16px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+strong { color: var(--text-bright); font-weight: 600; }
+code { font-family: var(--mono); font-size: 0.85em; background: var(--accent-dim); color: var(--accent); padding: 2px 6px; border-radius: 4px; }
+
+.subtitle { color: var(--text-muted); font-size: 1rem; margin-top: 4px; }
+.section-lead { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; }
+
+/* --- Hero --- */
+.hero { padding: 80px 0 48px; text-align: center; border-bottom: 1px solid var(--border); }
+.hero .subtitle { margin-bottom: 32px; }
+.stats-row { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; margin-top: 24px; }
+.stat { text-align: center; }
+.stat-val { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 12px; font-style: italic; }
+
+/* --- Nav --- */
+.nav-bar { position: sticky; top: 0; z-index: 100; background: rgba(15,17,23,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0; }
+.nav-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-link { font-size: 0.78rem; color: var(--text-muted); padding: 12px 10px; white-space: nowrap; transition: color 0.2s; text-decoration: none; border-bottom: 2px solid transparent; }
+.nav-link:hover, .nav-link.active { color: var(--text-bright); text-decoration: none; border-bottom-color: var(--accent); }
+
+/* --- Tags --- */
+.tag { display: inline-block; font-size: 0.7rem; font-weight: 500; padding: 3px 8px; border-radius: 3px; margin: 2px 2px; cursor: pointer; transition: all 0.2s; text-transform: lowercase; letter-spacing: 0.3px; }
+.tag[data-tag="deterministic"] { background: var(--green-dim); color: var(--green); }
+.tag[data-tag="non-deterministic"] { background: var(--purple-dim); color: var(--purple); }
+.tag[data-tag="fan-out"] { background: var(--cyan-dim); color: var(--cyan); }
+.tag[data-tag="iterative"] { background: var(--amber-dim); color: var(--amber); }
+.tag[data-tag="ai-limits"] { background: var(--red-dim); color: var(--red); }
+.tag[data-tag="headless"] { background: var(--accent-dim); color: var(--accent); }
+
+.tag.highlight { outline: 2px solid; outline-offset: 1px; }
+.theme-section.dimmed { opacity: 0.25; transition: opacity 0.3s; }
+
+.tags-row { margin: 12px 0 0; }
+
+/* --- Cards --- */
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; transition: border-color 0.2s; }
+.card:hover { border-color: #3a3d47; }
+.card-title { font-weight: 600; color: var(--text-bright); margin-bottom: 4px; }
+.card-desc { font-size: 0.9rem; color: var(--text); }
+.card-link { font-size: 0.8rem; margin-top: 8px; display: inline-block; }
+
+/* --- Detail toggles --- */
+.detail-toggle { font-size: 0.8rem; color: var(--accent); cursor: pointer; margin-top: 8px; display: inline-block; user-select: none; }
+.detail-toggle:hover { text-decoration: underline; }
+.detail-content { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.9rem; }
+.detail-content.open { display: block; }
+.detail-content ul { margin: 8px 0 8px 20px; }
+.detail-content li { margin-bottom: 6px; font-size: 0.88rem; }
+
+/* --- Images --- */
+.img-frame { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin: 16px 0; }
+.img-frame img { width: 100%; display: block; }
+.img-caption { font-size: 0.75rem; color: var(--text-muted); padding: 8px 12px; background: var(--bg-card); }
+
+/* --- Insight boxes --- */
+.insight-box { background: var(--bg-card); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 20px 0; }
+.insight-box.warn { border-left-color: var(--amber); }
+.insight-box.fail { border-left-color: var(--red); }
+.insight-box p:last-child { margin-bottom: 0; }
+
+/* --- Flow diagram (CSS-only) --- */
+.flow { display: flex; align-items: center; gap: 0; margin: 20px 0; flex-wrap: wrap; }
+.flow-step { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; font-size: 0.82rem; color: var(--text-bright); text-align: center; white-space: nowrap; }
+.flow-arrow { color: var(--text-muted); font-size: 1.2rem; padding: 0 6px; }
+
+/* --- Cross-cutting grid --- */
+.insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 600px) { .insight-grid { grid-template-columns: 1fr; } }
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.25rem; }
+  .stats-row { gap: 20px; }
+  .stat-val { font-size: 1.4rem; }
+  section { padding: 40px 0; }
+  .hero { padding: 48px 0 32px; }
+  .flow { flex-direction: column; align-items: stretch; }
+  .flow-arrow { transform: rotate(90deg); text-align: center; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ==================== HERO ==================== -->
+<div class="hero">
+  <div class="container">
+    <h1>AI in My Development Workflow</h1>
+    <p class="subtitle">Alex Poole, Developer</p>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val">200</div><div class="stat-label">Sessions</div></div>
+      <div class="stat"><div class="stat-val">31h</div><div class="stat-label">Collaboration</div></div>
+      <div class="stat"><div class="stat-val">110+</div><div class="stat-label">CLI Scripts</div></div>
+      <div class="stat"><div class="stat-val">800+</div><div class="stat-label">E2E Tests</div></div>
+      <div class="stat"><div class="stat-val">929+</div><div class="stat-label">Emails Generated</div></div>
+    </div>
+    <p class="stat-note">Stats from the last ~2 weeks of recorded data. Actual usage spans much longer.</p>
+  </div>
+</div>
+
+<!-- ==================== NAV ==================== -->
+<nav class="nav-bar">
+  <div class="nav-inner">
+    <a href="#targeted-tools" class="nav-link">Targeted Tools</a>
+    <a href="#websites" class="nav-link">Websites</a>
+    <a href="#saas" class="nav-link">SaaS Replacement</a>
+<a href="#testing" class="nav-link">E2E Testing</a>
+    <a href="#refactoring" class="nav-link">Refactoring</a>
+    <a href="#education" class="nav-link">Education</a>
+    <a href="#insights" class="nav-link">Cross-Cutting Insights</a>
+  </div>
+</nav>
+
+<!-- ==================== TARGETED TOOLS ==================== -->
+<section id="targeted-tools" class="theme-section" data-tags="deterministic headless">
+  <div class="container">
+    <h2>Targeted Tools</h2>
+    <p class="section-lead">Single-purpose tools built fast to solve specific problems. No build step, no framework overhead &mdash; Bootstrap, CDNs, vanilla JS, ship it.</p>
+
+    <div class="tags-row">
+      <span class="tag" data-tag="deterministic">deterministic</span>
+      <span class="tag" data-tag="headless">headless automation</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Prompt Editor</div>
+      <div class="card-desc">Browser-based prompt refinement tool. Two-column layout with selection-based commenting, persistent local storage, one-click export. Built for iterative prompt engineering.</div>
+      <a class="card-link" href="https://reprompt.pro/" target="_blank">reprompt.pro &rarr;</a>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Rental Yield Calculator</div>
+      <div class="card-desc">Models optimal rental asking price by calculating let probability, void periods, and net income across configurable time horizons. Financial modelling in the browser.</div>
+      <a class="card-link" href="https://reprompt.pro/rental-price-calculator" target="_blank">reprompt.pro/rental-price-calculator &rarr;</a>
+    </div>
+
+    <div class="img-frame">
+      <img src="images/rental-price-calc.jfif" alt="Rental price calculator showing optimal asking price analysis">
+      <div class="img-caption">Rental yield calculator &mdash; single-prompt tool, no build step, real financial modelling</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Lead Generation Pipeline</div>
+      <div class="card-desc">110+ PHP CLI scripts: data ingestion (Apify, LinkedIn, Indeed), company normalization, AI-powered classification, lead magnet PDF generation, email verification, cold email generation, export to Instantly.ai.</div>
+      <div class="img-frame" style="margin-top: 12px;">
+        <img src="images/parallal_agents.png" alt="5 parallel Claude Code subagents analysing different verticals">
+        <div class="img-caption">Fan-out across the lead gen pipeline &mdash; 5 parallel subagents analysing different industry verticals simultaneously</div>
+      </div>
+      <span class="detail-toggle" onclick="toggleDetail(this)">How these get built &darr;</span>
+      <div class="detail-content">
+        <ul>
+          <li>Usually a <strong>single prompt</strong> with some polishing</li>
+          <li>Off-the-shelf: Bootstrap, CDNs, no build, no fuss</li>
+          <li>For CLI tools: pragmatic PHP, Composer libraries as needed</li>
+          <li><strong>Claude headless mode</strong> for scripts that need AI inference &mdash; 189 automated sessions in the recorded window alone</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== WEBSITES ==================== -->
+<section id="websites" class="theme-section" data-tags="iterative non-deterministic">
+  <div class="container">
+    <h2>Websites</h2>
+    <p class="section-lead">Professional, polished websites. Custom CSS with variables, jQuery, mobile-first. Micro-interactions and premium design elements that used to cost hours and now come almost free via AI.</p>
+
+    <div class="tags-row">
+      <span class="tag" data-tag="non-deterministic">slash commands</span>
+      <span class="tag" data-tag="iterative">iterative refinement</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Saxophonist Portfolio</div>
+      <div class="card-desc">Hero imagery, 18-image gallery, embedded audio/video, testimonials, Instagram integration, subject-specific contact form, student portal. Mobile-responsive throughout.</div>
+      <a class="card-link" href="https://saxylizbeth.co.uk/" target="_blank">saxylizbeth.co.uk &rarr;</a>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sales Training Consultancy</div>
+      <div class="card-desc">Card-based services with modal popups, credential logos (NHS, Dennis Publishing), CTA flow, media integration (radio interviews, LinkedIn articles). Clean, cohesive branding.</div>
+      <a class="card-link" href="https://websitetomorrow.co.uk/site/natasha/" target="_blank">websitetomorrow.co.uk/site/natasha &rarr;</a>
+    </div>
+
+    <div class="img-frame">
+      <img src="images/liz-mitchell-mobile-friendly.png" alt="Liz Mitchell website shown across mobile, tablet and desktop">
+      <div class="img-caption">saxylizbeth.co.uk &mdash; responsive across all screen sizes, micro-interactions throughout</div>
+    </div>
+
+    <span class="detail-toggle" onclick="toggleDetail(this)">Methodology &darr;</span>
+    <div class="detail-content">
+      <ul>
+        <li>Custom <strong>web design skill</strong> (Claude Code slash command) encodes a consistent design approach</li>
+        <li>Custom CSS with variables &mdash; no Tailwind, no SASS build step</li>
+        <li>jQuery for interactions</li>
+        <li>Micro-interactions: hover states, transitions, scroll reveals, modal animations</li>
+        <li>&ldquo;Premium&rdquo; elements (parallax, card reveals, smooth scroll, gradient overlays) that used to cost hours of fiddling and now come almost free</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SAAS REPLACEMENT ==================== -->
+<section id="saas" class="theme-section" data-tags="deterministic iterative headless ai-limits">
+  <div class="container">
+    <h2>SaaS-Replacement Systems</h2>
+    <p class="section-lead">Full applications that replace paid SaaS tools. Pragmatic OO MVC PHP, Composer libraries, unit tests to prove functionality and prevent regressions.</p>
+
+    <div class="tags-row">
+      <span class="tag" data-tag="deterministic">deterministic</span>
+      <span class="tag" data-tag="iterative">iterative refinement</span>
+      <span class="tag" data-tag="headless">headless automation</span>
+      <span class="tag" data-tag="ai-limits">ai limitations</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cold Email GTM Pipeline</div>
+      <div class="card-desc">Complete pipeline replacing Apollo, Instantly&rsquo;s built-in features, and manual prospecting. Scraping, enrichment, AI classification, email generation, verification, campaign management. 929+ emails generated and stabilized.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Internal CRM</div>
+      <div class="card-desc">Replaces HubSpot/Pipedrive. PHP 8.1+, custom MVC, MySQL, Docker. Lead management, CSV import, call session tracking, email verification, web scraping, AI enrichment, background job queue, Instantly.ai integration, activity logging. 18 database migrations, 17 unit test files.</div>
+    </div>
+
+    <div class="img-frame">
+      <img src="images/crmscreen.png" alt="CRM dashboard showing leads, verification stats, industry breakdown">
+      <div class="img-caption">wwwCRM dashboard &mdash; lead verification stats, industry breakdown, recent imports</div>
+    </div>
+
+    <span class="detail-toggle" onclick="toggleDetail(this)">Architecture &amp; methodology &darr;</span>
+    <div class="detail-content">
+      <h3>Stack</h3>
+      <ul>
+        <li>Pragmatic OO MVC PHP (custom, no framework)</li>
+        <li>Composer: Guzzle for HTTP, Resend for email, phpdotenv for config</li>
+        <li>Service layer pattern &mdash; business logic isolated, controllers delegate</li>
+        <li>Dependency injection for testability</li>
+        <li>Unit tests: Mockery + PHPUnit 10.5</li>
+        <li>Handler pattern for async jobs</li>
+        <li>Docker Compose for local dev and production</li>
+      </ul>
+
+      <h3 style="margin-top: 16px;">DevOps</h3>
+      <p>Deployment handled by Claude Code via interactive prompting onto a Hetzner server &mdash; no Ansible, no Terraform required.</p>
+
+      <h3 style="margin-top: 16px;">Lessons from real sessions</h3>
+      <div class="insight-box warn">
+        <p><strong>Atomic writes:</strong> Race conditions wiped a shared tracker file twice before I learned to write-to-temp-then-rename.</p>
+      </div>
+      <div class="insight-box fail">
+        <p><strong>Streisand effect in prompting:</strong> Telling Claude &ldquo;do not mention [brand name]&rdquo; caused it to mention the brand <em>more</em>. Had to restructure the prompt entirely.</p>
+      </div>
+      <div class="insight-box warn">
+        <p><strong>Compounding regressions:</strong> A reverted fix in one pipeline step broke downstream content checks. Now I test the full pipeline end-to-end after every change.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== E2E TESTING ==================== -->
+<section id="testing" class="theme-section" data-tags="fan-out deterministic iterative ai-limits">
+  <div class="container">
+    <h2>End-to-End Testing</h2>
+    <p class="section-lead">800+ meaningful Playwright user journey tests on Powered By Rental, a CRM for the height access plant industry. Built over many weeks using Claude Code + Playwright MCP.</p>
+
+    <div class="tags-row">
+      <span class="tag" data-tag="fan-out">fan-out pattern</span>
+      <span class="tag" data-tag="deterministic">deterministic</span>
+      <span class="tag" data-tag="iterative">iterative refinement</span>
+      <span class="tag" data-tag="ai-limits">ai limitations</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">The context</div>
+      <div class="card-desc">The CRM itself was vibe-coded &mdash; built by a non-coder in Claude Code. The tests were guardrails around a non-deterministic codebase, enabling continued aggressive development without regression risk. Tests run the full UI via Playwright, catching both backend and UI regressions.</div>
+    </div>
+
+    <h3>Methodology</h3>
+    <div class="flow">
+      <div class="flow-step">Enumerate<br><small>250+ files</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Fan-out subagents<br><small>waves of 10</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Document<br><small>functionality</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Distil to<br><small>user journeys</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Author tests<br><small>iteratively</small></div>
+    </div>
+
+    <span class="detail-toggle" onclick="toggleDetail(this)">Baked-in test preferences &darr;</span>
+    <div class="detail-content">
+      <ul>
+        <li><strong>No weak tests</strong> &mdash; every assertion must test something meaningful</li>
+        <li><strong>No hidden failures</strong> &mdash; tests must fail visibly, not silently pass</li>
+        <li><strong>Work around external dependencies</strong> &mdash; avoid fragile tests dependent on external services</li>
+        <li><strong>Batch similar conditions</strong> &mdash; test multiple form error conditions in one test rather than restarting scaffolding for 10 near-identical tests</li>
+        <li><strong>Idempotent tests</strong> &mdash; any selection can run in any order</li>
+      </ul>
+    </div>
+
+    <h3 style="margin-top: 24px;">Reuse: tests &rarr; user documentation</h3>
+    <p>The same Playwright test suite became the foundation for auto-generating user documentation. Screenshots were captured during test runs.</p>
+
+    <div class="insight-box">
+      <p><strong>Deterministic vs non-deterministic moment:</strong> Claude and Gemini were both unreliable at cropping screenshots to show only modals. The non-deterministic approach failed repeatedly. So we vibe-coded a programmatic solution that <strong>sampled colours in the screenshot</strong> to determine modal edges and crop accurately every time. Deterministic won.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== REFACTORING ==================== -->
+<section id="refactoring" class="theme-section" data-tags="fan-out deterministic">
+  <div class="container">
+    <h2>Refactoring Legacy PHP</h2>
+    <p class="section-lead">Using parallel subagent tasks in a fan-out architecture to safely refactor a 250+ file PHP codebase.</p>
+
+    <div class="tags-row">
+      <span class="tag" data-tag="fan-out">fan-out pattern</span>
+      <span class="tag" data-tag="deterministic">deterministic</span>
+    </div>
+
+    <h3>The fan-out / reverse fan-out pattern</h3>
+    <div class="flow">
+      <div class="flow-step">Enumerate<br><small>all files</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Fan-out<br><small>10 agents &times; N waves</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Each writes<br><small>own .md file</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Collector agents<br><small>combine &amp; tidy</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">I/O specification<br><small>complete map</small></div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">Refactor<br><small>verify against spec</small></div>
+    </div>
+
+    <div class="img-frame">
+      <img src="images/parallel-agents-2.jfif" alt="Parallel subagents searching a large codebase for a specific code smell">
+      <div class="img-caption">Fan-out in action &mdash; subagents searching a large codebase for a specific code smell</div>
+    </div>
+
+    <span class="detail-toggle" onclick="toggleDetail(this)">Why this architecture &darr;</span>
+    <div class="detail-content">
+      <ul>
+        <li>Each subagent gets a <strong>strict, narrow prompt</strong>: enumerate dependencies, document I/O for public endpoints, record types</li>
+        <li><strong>Each agent writes to its own file</strong> &mdash; multiple agents writing to one file causes data loss (they overwrite each other)</li>
+        <li><strong>Reverse fan-out:</strong> collector agents combine outputs into summaries, working around context limits and file size constraints</li>
+        <li>The I/O map acts as a contract &mdash; if post-refactor I/O matches the spec, the refactoring is safe</li>
+        <li>Confidence comes from the enumeration being <strong>methodical</strong>, not from AI &ldquo;understanding&rdquo; the code holistically</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== EDUCATION ==================== -->
+<section id="education" class="theme-section" data-tags="iterative">
+  <div class="container">
+    <h2>Education</h2>
+    <p class="section-lead">The Sunday afternoon session.</p>
+
+    <div class="tags-row">
+      <span class="tag" data-tag="iterative">iterative refinement</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Building a browser game with my child</div>
+      <div class="card-desc">Forward-scrolling browser game built iteratively with my 5-year-old. Shooting mechanics, high scores, difficulty tuning across 10+ feature requests in a single session. He co-designed every feature: &ldquo;make it harder,&rdquo; &ldquo;add shooting,&rdquo; &ldquo;can we have a high score?&rdquo; And when he couldn&rsquo;t beat me, he asked Claude Code to increase the number of lives &mdash; you can see it in the screenshot. Claude Code as a tool for teaching computational thinking through play.</div>
+      <a class="card-link" href="https://reprompt.pro/game/" target="_blank">reprompt.pro/game &rarr;</a>
+    </div>
+
+    <div class="img-frame">
+      <img src="images/game.png" alt="Browser game alongside Claude Code terminal">
+      <div class="img-caption">Game on the left, Claude Code on the right &mdash; real-time pair programming with a 5-year-old co-designer. Note the terminal: he&rsquo;s just asked for more lives.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CROSS-CUTTING INSIGHTS ==================== -->
+<section id="insights">
+  <div class="container">
+    <h2>Cross-Cutting Insights</h2>
+    <p class="section-lead">Patterns and lessons that span every theme above. Click any tag to see where it applies.</p>
+
+    <div class="insight-grid">
+
+      <!-- Deterministic vs Non-deterministic -->
+      <div class="card" style="border-left: 3px solid var(--green);">
+        <div class="card-title">Deterministic vs Non-Deterministic</div>
+        <div class="card-desc" style="margin-bottom: 12px;">The most important skill in AI-assisted development is knowing when to choose each approach.</div>
+        <p style="font-size: 0.85rem; margin-bottom: 8px;"><strong style="color: var(--green);">Deterministic</strong> (scripts, programmatic logic):<br>Process automation, image cropping, fan-out documentation</p>
+        <p style="font-size: 0.85rem; margin-bottom: 8px;"><strong style="color: var(--purple);">Non-deterministic</strong> (headless AI, slash commands):<br>Email generation, classification, web design, strategy</p>
+        <p style="font-size: 0.85rem; margin-bottom: 0;"><strong>The rule:</strong> same correct answer every time &rarr; deterministic. Benefits from variation or novel reasoning &rarr; non-deterministic, but sandboxed.</p>
+      </div>
+
+      <!-- Fan-out pattern -->
+      <div class="card" style="border-left: 3px solid var(--cyan);">
+        <div class="card-title">Fan-Out / Reverse Fan-Out</div>
+        <div class="card-desc" style="margin-bottom: 12px;">A reusable architecture for AI work across large codebases.</div>
+        <p style="font-size: 0.85rem; margin-bottom: 8px;"><strong>Fan-out:</strong> N parallel subagents, strict prompts, each writes to its own file.</p>
+        <p style="font-size: 0.85rem; margin-bottom: 8px;"><strong>Reverse fan-out:</strong> Collector agents combine outputs, working around context limits.</p>
+        <p style="font-size: 0.85rem; margin-bottom: 0;"><strong>Key discovery:</strong> multiple agents writing to one file = data loss. Each agent must have its own output.</p>
+      </div>
+
+      <!-- Iterative refinement -->
+      <div class="card" style="border-left: 3px solid var(--amber);">
+        <div class="card-title">Iterative Refinement</div>
+        <div class="card-desc" style="margin-bottom: 12px;">AI output improves dramatically when you accumulate and encode preferences over time.</div>
+        <p style="font-size: 0.85rem; margin-bottom: 8px;">Tests: &ldquo;no weak tests, no hidden failures, idempotent, batch conditions&rdquo;</p>
+        <p style="font-size: 0.85rem; margin-bottom: 8px;">Emails: Streisand effect, atomic writes, end-to-end validation</p>
+        <p style="font-size: 0.85rem; margin-bottom: 0;"><strong>These preferences are the real IP.</strong> The AI is the tool. The judgement is the value.</p>
+      </div>
+
+      <!-- Where AI falls short -->
+      <div class="card" style="border-left: 3px solid var(--red);">
+        <div class="card-title">Where AI Falls Short</div>
+        <div class="card-desc" style="margin-bottom: 12px;">Specific, honest examples. Not theory.</div>
+        <ul style="font-size: 0.85rem; margin-left: 16px;">
+          <li><strong>Over-exploration:</strong> launches subtasks when told to just read a file</li>
+          <li><strong>Verbosity:</strong> asks questions instead of making reasonable assumptions</li>
+          <li><strong>Compounding regressions:</strong> fixes create new bugs downstream</li>
+          <li><strong>Perspective confusion:</strong> addresses me as customer, not business owner</li>
+          <li><strong>Streisand effect:</strong> &ldquo;don&rsquo;t mention X&rdquo; makes X appear more</li>
+          <li><strong>Context limits:</strong> large codebases need architectural workarounds</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Working style summary -->
+    <div class="card" style="margin-top: 16px; border-left: 3px solid var(--accent);">
+      <div class="card-title">How I work</div>
+      <div class="card-desc">
+        Fast-iterating, interrupt-driven. Steer with rapid corrections, not upfront specs. Median response time: 45 seconds. Prefer action over discussion.
+        Diverse: code, strategy, research, debugging, testing, content generation &mdash; all in the same fortnight.
+        200 sessions, 320 messages, 31.3 hours, +3,951 lines &mdash; and that&rsquo;s just the last ~2 weeks of recorded data.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer style="text-align: center; padding: 48px 24px; border-top: 1px solid var(--border);">
+  <div class="img-frame" style="max-width: 500px; margin: 0 auto 24px;">
+    <img src="images/absolutely-right.jfif" alt="You're Absolutely Right!">
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px;">Built with Claude Code, naturally.</p>
+  <p style="color: var(--text-muted); font-size: 0.75rem;">Alex Poole, 2026</p>
+</footer>
+
+<script>
+// --- Detail toggles ---
+function toggleDetail(el) {
+  const content = el.nextElementSibling;
+  const open = content.classList.toggle('open');
+  el.innerHTML = el.innerHTML.replace(open ? '\u2193' : '\u2191', open ? '\u2191' : '\u2193');
+}
+
+// --- Tag highlighting ---
+document.querySelectorAll('.tag').forEach(tag => {
+  tag.addEventListener('click', function() {
+    const tagName = this.dataset.tag;
+    const allTags = document.querySelectorAll('.tag');
+    const sections = document.querySelectorAll('.theme-section');
+    const isAlreadyActive = this.classList.contains('highlight');
+
+    // Clear all
+    allTags.forEach(t => t.classList.remove('highlight'));
+    sections.forEach(s => s.classList.remove('dimmed'));
+
+    if (isAlreadyActive) return;
+
+    // Highlight matching tags
+    allTags.forEach(t => {
+      if (t.dataset.tag === tagName) t.classList.add('highlight');
+    });
+
+    // Dim non-matching sections
+    sections.forEach(s => {
+      const sectionTags = s.dataset.tags || '';
+      if (!sectionTags.includes(tagName)) {
+        s.classList.add('dimmed');
+      }
+    });
+  });
+});
+
+// Clear on clicking background
+document.addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tag')) {
+    document.querySelectorAll('.tag').forEach(t => t.classList.remove('highlight'));
+    document.querySelectorAll('.theme-section').forEach(s => s.classList.remove('dimmed'));
+  }
+});
+
+// --- Sticky nav active state ---
+const navLinks = document.querySelectorAll('.nav-link');
+const observerOpts = { rootMargin: '-80px 0px -60% 0px' };
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const id = entry.target.id;
+      const link = document.querySelector(`.nav-link[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, observerOpts);
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
