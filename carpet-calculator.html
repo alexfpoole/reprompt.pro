@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carpet Cut Optimiser</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4f6f9;
+            --card: #ffffff;
+            --accent: #4a6cf7;
+            --accent-light: #eef1fe;
+            --highlight: #e94560;
+            --text: #2d3748;
+            --muted: #718096;
+            --border: #e2e8f0;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .card-header {
+            background: var(--accent-light);
+            border-bottom: 1px solid var(--border);
+            border-radius: 12px 12px 0 0 !important;
+        }
+        .table { color: var(--text); }
+        .table thead th {
+            background: var(--accent-light);
+            border-color: var(--border);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+        }
+        .table td { border-color: var(--border); vertical-align: middle; }
+        .form-select, .form-control {
+            background: #fff;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .form-select:focus, .form-control:focus {
+            background: #fff;
+            color: var(--text);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.2rem rgba(74,108,247,0.2);
+        }
+        .form-select option { background: #fff; }
+        .btn-danger { background: var(--highlight); border-color: var(--highlight); }
+        .btn-danger:hover { background: #c73e54; border-color: #c73e54; }
+        .btn-outline-light { color: var(--accent); border-color: var(--accent); }
+        .btn-outline-light:hover { background: var(--accent); color: #fff; }
+        #canvas-container {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: auto;
+            max-height: 80vh;
+        }
+        canvas { display: block; margin: 0 auto; }
+        .unit-toggle {
+            cursor: pointer;
+            user-select: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .unit-toggle.active {
+            background: var(--accent);
+            color: #fff;
+        }
+        .summary-box {
+            background: var(--accent-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 18px;
+            font-size: 0.95rem;
+        }
+        .room-color-swatch {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border-radius: 3px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        h4 { font-weight: 700; }
+        .form-control::-webkit-inner-spin-button { opacity: 1; }
+
+        /* L-shape UI */
+        .l-shape-row td {
+            background: #f8fafc;
+            border-top: none !important;
+            padding-top: 0 !important;
+        }
+        .l-shape-panel {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 8px 4px;
+            flex-wrap: wrap;
+        }
+        .corner-picker {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+            width: 56px;
+            flex-shrink: 0;
+        }
+        .corner-btn {
+            width: 26px; height: 26px;
+            border: 2px solid var(--border);
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .corner-btn:hover { border-color: var(--accent); }
+        .corner-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+        .corner-btn svg { width: 18px; height: 18px; }
+        .l-preview-wrap {
+            width: 80px; height: 60px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .l-preview-wrap svg {
+            width: 100%;
+            height: 100%;
+        }
+        .l-toggle-btn {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .l-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .l-toggle-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid py-4" style="max-width:1400px;">
+    <h2 class="mb-1"><i class="fa-solid fa-scissors me-2"></i>Carpet Cut Optimiser</h2>
+    <p class="text-muted mb-4">Calculate the optimal way to cut carpet from a roll for multiple rooms.</p>
+
+    <div class="row g-4">
+        <!-- Left: Data Entry -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-ruler-combined me-2"></i>Room Dimensions</h5>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="unit-toggle active" data-unit="metric" onclick="setUnit('metric')"><i class="fa-solid fa-ruler me-1"></i>m / cm</span>
+                        <span class="unit-toggle" data-unit="imperial" onclick="setUnit('imperial')"><i class="fa-solid fa-ruler-horizontal me-1"></i>ft / in</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0" id="room-table">
+                        <thead>
+                            <tr>
+                                <th style="width:30%">Room</th>
+                                <th style="width:22%">Length <span class="unit-label">(m)</span></th>
+                                <th style="width:22%">Width <span class="unit-label">(m)</span></th>
+                                <th style="width:14%">Shape</th>
+                                <th style="width:12%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="room-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="card-body pt-2 pb-3 px-3">
+                    <button class="btn btn-sm btn-outline-light" onclick="addRow()"><i class="fa-solid fa-plus me-1"></i>Add Room</button>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body py-3 px-3">
+                    <div class="row align-items-end g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label mb-1 small text-muted"><i class="fa-solid fa-scroll me-1"></i>Carpet Roll Width</label>
+                            <select class="form-select" id="roll-width">
+                                <option value="3.66">3.66 m (12 ft)</option>
+                                <option value="4" selected>4 m (13.1 ft)</option>
+                                <option value="4.11">4.11 m (13.5 ft)</option>
+                                <option value="4.57">4.57 m (15 ft)</option>
+                                <option value="5">5 m (16.4 ft)</option>
+                                <option value="0">N/A (tiles / no roll constraint)</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <button class="btn btn-danger px-4" onclick="generate()"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>Generate Layout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Output -->
+        <div class="col-lg-6">
+            <div id="output-area" style="display:none;">
+                <div id="summary" class="summary-box mb-3"></div>
+                <div id="canvas-container">
+                    <canvas id="carpet-canvas"></canvas>
+                </div>
+            </div>
+            <div id="placeholder" class="text-center text-muted py-5">
+                <p class="fs-5 mb-1">Enter room dimensions and click <strong>Generate Layout</strong></p>
+                <p class="small">Rooms will be arranged to minimise waste on the carpet roll.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── State ──
+let unit = 'metric';
+const SAFETY_FACTOR = 1.05;
+
+const ROOM_OPTIONS = [
+    'Bedroom 1','Bedroom 2','Bedroom 3','Bedroom 4','Bedroom 5','Bedroom 6',
+    'Lounge','Living Room','Dining Room','Kitchen','Hall','Landing',
+    'Stairs','Cupboard','Study','Office','Bathroom','En-suite',
+    'Utility Room','Conservatory','Nursery','Guest Room','Walk-in Wardrobe'
+];
+
+const COLORS = [
+    '#e94560','#0ea5e9','#22c55e','#f59e0b','#8b5cf6','#ec4899',
+    '#14b8a6','#f97316','#6366f1','#84cc16','#ef4444','#06b6d4',
+    '#a855f7','#10b981','#fb923c','#3b82f6','#e879f9','#facc15',
+    '#2dd4bf','#f43f5e','#818cf8','#4ade80','#fbbf24','#c084fc'
+];
+
+const DEFAULT_ROOMS = [
+    { room: 'Bedroom 1', length: 3.8, width: 3.2 },
+    { room: 'Bedroom 2', length: 3.0, width: 2.8 },
+    { room: 'Lounge',    length: 5.0, width: 3.5, lShaped: true, cutCorner: 'tr', cutW: 1.5, cutH: 2.0 },
+    { room: 'Hall',      length: 4.5, width: 1.2 },
+    { room: 'Cupboard',  length: 1.0, width: 0.8 },
+];
+
+// ── SVG helpers for L-shape corners ──
+// Each returns an SVG path for the L shape given a particular cut corner
+// Bounding box is 0,0 to W,H with cut of cw,ch from the named corner
+function lShapePath(corner) {
+    // Returns a path string for the L shape (normalised 0-1 box, cut ~40%)
+    const c = 0.4;
+    switch(corner) {
+        case 'tl': return `M ${c} 0 L 1 0 L 1 1 L 0 1 L 0 ${c} L ${c} ${c} Z`;
+        case 'tr': return `M 0 0 L ${1-c} 0 L ${1-c} ${c} L 1 ${c} L 1 1 L 0 1 Z`;
+        case 'bl': return `M 0 0 L 1 0 L 1 1 L ${c} 1 L ${c} ${1-c} L 0 ${1-c} Z`;
+        case 'br': return `M 0 0 L 1 0 L 1 ${1-c} L ${1-c} ${1-c} L ${1-c} 1 L 0 1 Z`;
+    }
+}
+
+function cornerPickerSVG(corner) {
+    return `<svg viewBox="-0.05 -0.05 1.1 1.1"><path d="${lShapePath(corner)}" fill="${'var(--accent)'}" opacity="0.3" stroke="var(--accent)" stroke-width="0.06"/></svg>`;
+}
+
+function lPreviewSVG(corner, W, H, cw, ch) {
+    // Build an accurate SVG of the L shape with real proportions
+    // W=total width, H=total height, cw=cutout width, ch=cutout height
+    if (!W || !H || !cw || !ch) return '';
+    const rw = cw / W, rh = ch / H;
+    let path;
+    switch(corner) {
+        case 'tl': path = `M ${rw} 0 L 1 0 L 1 1 L 0 1 L 0 ${rh} L ${rw} ${rh} Z`; break;
+        case 'tr': path = `M 0 0 L ${1-rw} 0 L ${1-rw} ${rh} L 1 ${rh} L 1 1 L 0 1 Z`; break;
+        case 'bl': path = `M 0 0 L 1 0 L 1 1 L ${rw} 1 L ${rw} ${1-rh} L 0 ${1-rh} Z`; break;
+        case 'br': path = `M 0 0 L 1 0 L 1 ${1-rh} L ${1-rw} ${1-rh} L ${1-rw} 1 L 0 1 Z`; break;
+    }
+    return `<svg viewBox="-0.05 -0.05 1.1 1.1" preserveAspectRatio="none">
+        <path d="${path}" fill="var(--accent)" opacity="0.2" stroke="var(--accent)" stroke-width="0.03"/>
+        <line x1="0" y1="0" x2="1" y2="0" stroke="var(--border)" stroke-width="0.01" stroke-dasharray="0.04 0.02"/>
+        <line x1="1" y1="0" x2="1" y2="1" stroke="var(--border)" stroke-width="0.01" stroke-dasharray="0.04 0.02"/>
+        <line x1="0" y1="1" x2="1" y2="1" stroke="var(--border)" stroke-width="0.01" stroke-dasharray="0.04 0.02"/>
+        <line x1="0" y1="0" x2="0" y2="1" stroke="var(--border)" stroke-width="0.01" stroke-dasharray="0.04 0.02"/>
+    </svg>`;
+}
+
+// ── Conversion helpers ──
+function mToDisplay(m) {
+    if (unit === 'imperial') {
+        const totalInches = m * 39.3701;
+        const ft = Math.floor(totalInches / 12);
+        const inches = Math.round((totalInches % 12) * 10) / 10;
+        return { ft, inches };
+    }
+    return m;
+}
+function displayToM(ft, inches) {
+    return (ft * 12 + parseFloat(inches || 0)) * 0.0254;
+}
+function mToFtStr(m) {
+    const d = mToDisplay(m);
+    return `${d.ft}'${d.inches}"`;
+}
+function formatDim(m) {
+    if (unit === 'imperial') return mToFtStr(m);
+    return m.toFixed(2) + ' m';
+}
+
+// ── Read a dimension value from a cell ──
+function readDimFromCell(td) {
+    if (unit === 'imperial') {
+        const ft = parseFloat(td.querySelector('.dim-ft')?.value || 0);
+        const inches = parseFloat(td.querySelector('.dim-in')?.value || 0);
+        return displayToM(ft, inches);
+    }
+    return parseFloat(td.querySelector('.dim-m')?.value || 0);
+}
+
+// ── Unit toggle ──
+function setUnit(u) {
+    const rows = readAllRows();
+    unit = u;
+    document.querySelectorAll('.unit-toggle').forEach(el => {
+        el.classList.toggle('active', el.dataset.unit === u);
+    });
+    document.querySelectorAll('.unit-label').forEach(el => {
+        el.textContent = u === 'metric' ? '(m)' : '(ft/in)';
+    });
+    renderRows(rows);
+}
+
+// ── Table helpers ──
+function buildRoomSelect(selected) {
+    let html = '<select class="form-select form-select-sm">';
+    ROOM_OPTIONS.forEach(r => {
+        html += `<option${r === selected ? ' selected' : ''}>${r}</option>`;
+    });
+    html += '</select>';
+    return html;
+}
+
+function buildDimInput(metreValue, extraClass) {
+    const cls = extraClass || 'dim-m';
+    if (unit === 'imperial') {
+        const d = mToDisplay(metreValue);
+        return `<div class="d-flex gap-1 align-items-center">
+            <input type="number" class="form-control form-control-sm dim-ft ${extraClass || ''}" value="${d.ft}" min="0" step="1" style="width:50px">
+            <span class="small text-muted">ft</span>
+            <input type="number" class="form-control form-control-sm dim-in ${extraClass || ''}" value="${d.inches}" min="0" max="11.9" step="0.5" style="width:55px">
+            <span class="small text-muted">in</span>
+        </div>`;
+    }
+    return `<input type="number" class="form-control form-control-sm ${cls}" value="${metreValue}" min="0" step="0.01">`;
+}
+
+function getRowId() {
+    return 'row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+}
+
+function addRow(room, length, width, lShaped, cutCorner, cutW, cutH) {
+    room = room || ROOM_OPTIONS[0];
+    length = length || 3.0;
+    width = width || 3.0;
+    lShaped = lShaped || false;
+    cutCorner = cutCorner || 'tr';
+    cutW = cutW || 1.0;
+    cutH = cutH || 1.0;
+
+    const rowId = getRowId();
+    const tbody = document.getElementById('room-tbody');
+
+    // Main row
+    const tr = document.createElement('tr');
+    tr.dataset.rowId = rowId;
+    tr.innerHTML = `
+        <td>${buildRoomSelect(room)}</td>
+        <td>${buildDimInput(length)}</td>
+        <td>${buildDimInput(width)}</td>
+        <td class="text-center">
+            <button class="btn l-toggle-btn ${lShaped ? 'active' : ''}" onclick="toggleLShape(this, '${rowId}')" title="Toggle L-shaped room">
+                <i class="fa-solid fa-shapes me-1"></i>L
+            </button>
+        </td>
+        <td class="text-center">
+            <button class="btn btn-sm btn-outline-danger" onclick="removeRoom('${rowId}')" title="Remove room"><i class="fa-solid fa-trash-can"></i></button>
+        </td>`;
+    tbody.appendChild(tr);
+
+    // L-shape detail row (hidden by default)
+    const ltr = document.createElement('tr');
+    ltr.classList.add('l-shape-row');
+    ltr.dataset.rowId = rowId;
+    ltr.style.display = lShaped ? '' : 'none';
+    ltr.innerHTML = `
+        <td colspan="5">
+            <div class="l-shape-panel">
+                <div>
+                    <div class="text-muted mb-1" style="font-size:0.7rem;font-weight:600;">CUT CORNER</div>
+                    <div class="corner-picker" data-row-id="${rowId}">
+                        <button class="corner-btn ${cutCorner==='tl'?'active':''}" data-corner="tl" onclick="setCorner('${rowId}','tl')">${cornerPickerSVG('tl')}</button>
+                        <button class="corner-btn ${cutCorner==='tr'?'active':''}" data-corner="tr" onclick="setCorner('${rowId}','tr')">${cornerPickerSVG('tr')}</button>
+                        <button class="corner-btn ${cutCorner==='bl'?'active':''}" data-corner="bl" onclick="setCorner('${rowId}','bl')">${cornerPickerSVG('bl')}</button>
+                        <button class="corner-btn ${cutCorner==='br'?'active':''}" data-corner="br" onclick="setCorner('${rowId}','br')">${cornerPickerSVG('br')}</button>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted mb-1" style="font-size:0.7rem;font-weight:600;">CUTOUT WIDTH <span class="unit-label">${unit==='metric'?'(m)':'(ft/in)'}</span></div>
+                    ${buildDimInput(cutW, 'cut-w')}
+                </div>
+                <div>
+                    <div class="text-muted mb-1" style="font-size:0.7rem;font-weight:600;">CUTOUT DEPTH <span class="unit-label">${unit==='metric'?'(m)':'(ft/in)'}</span></div>
+                    ${buildDimInput(cutH, 'cut-h')}
+                </div>
+                <div class="l-preview-wrap" data-row-id="${rowId}">
+                    ${lPreviewSVG(cutCorner, width, length, cutW, cutH)}
+                </div>
+            </div>
+        </td>`;
+    tbody.appendChild(ltr);
+
+    // Attach input listeners for live preview update
+    ltr.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('input', () => updateLPreview(rowId));
+    });
+    tr.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('input', () => updateLPreview(rowId));
+    });
+}
+
+function removeRoom(rowId) {
+    document.querySelectorAll(`[data-row-id="${rowId}"]`).forEach(el => el.remove());
+}
+
+function toggleLShape(btn, rowId) {
+    btn.classList.toggle('active');
+    const lRow = document.querySelector(`tr.l-shape-row[data-row-id="${rowId}"]`);
+    const isActive = btn.classList.contains('active');
+    lRow.style.display = isActive ? '' : 'none';
+    if (isActive) updateLPreview(rowId);
+}
+
+function setCorner(rowId, corner) {
+    const picker = document.querySelector(`.corner-picker[data-row-id="${rowId}"]`);
+    picker.querySelectorAll('.corner-btn').forEach(b => b.classList.toggle('active', b.dataset.corner === corner));
+    updateLPreview(rowId);
+}
+
+function getActiveCorner(rowId) {
+    const active = document.querySelector(`.corner-picker[data-row-id="${rowId}"] .corner-btn.active`);
+    return active ? active.dataset.corner : 'tr';
+}
+
+function updateLPreview(rowId) {
+    const mainRow = document.querySelector(`tr[data-row-id="${rowId}"]:not(.l-shape-row)`);
+    const lRow = document.querySelector(`tr.l-shape-row[data-row-id="${rowId}"]`);
+    if (!mainRow || !lRow) return;
+
+    const tds = mainRow.querySelectorAll('td');
+    const W = readDimFromCell(tds[2]); // width
+    const H = readDimFromCell(tds[1]); // length
+
+    // Read cutout dims from the l-shape row
+    let cutW, cutH;
+    if (unit === 'imperial') {
+        const cwFt = parseFloat(lRow.querySelector('.cut-w.dim-ft')?.value || 0);
+        const cwIn = parseFloat(lRow.querySelector('.cut-w.dim-in')?.value || 0);
+        const chFt = parseFloat(lRow.querySelector('.cut-h.dim-ft')?.value || 0);
+        const chIn = parseFloat(lRow.querySelector('.cut-h.dim-in')?.value || 0);
+        cutW = displayToM(cwFt, cwIn);
+        cutH = displayToM(chFt, chIn);
+    } else {
+        cutW = parseFloat(lRow.querySelector('.cut-w')?.value || 0);
+        cutH = parseFloat(lRow.querySelector('.cut-h')?.value || 0);
+    }
+
+    const corner = getActiveCorner(rowId);
+    const wrap = document.querySelector(`.l-preview-wrap[data-row-id="${rowId}"]`);
+    wrap.innerHTML = lPreviewSVG(corner, W, H, cutW, cutH);
+}
+
+function readAllRows() {
+    const rows = [];
+    const mainRows = document.querySelectorAll('#room-tbody tr:not(.l-shape-row)');
+    mainRows.forEach(tr => {
+        const rowId = tr.dataset.rowId;
+        const room = tr.querySelector('select').value;
+        const tds = tr.querySelectorAll('td');
+        const length = readDimFromCell(tds[1]);
+        const width = readDimFromCell(tds[2]);
+
+        const lBtn = tr.querySelector('.l-toggle-btn');
+        const lShaped = lBtn && lBtn.classList.contains('active');
+
+        let cutCorner = 'tr', cutW = 1.0, cutH = 1.0;
+        if (lShaped) {
+            cutCorner = getActiveCorner(rowId);
+            const lRow = document.querySelector(`tr.l-shape-row[data-row-id="${rowId}"]`);
+            if (lRow) {
+                if (unit === 'imperial') {
+                    const cwFt = parseFloat(lRow.querySelector('.cut-w.dim-ft')?.value || 0);
+                    const cwIn = parseFloat(lRow.querySelector('.cut-w.dim-in')?.value || 0);
+                    const chFt = parseFloat(lRow.querySelector('.cut-h.dim-ft')?.value || 0);
+                    const chIn = parseFloat(lRow.querySelector('.cut-h.dim-in')?.value || 0);
+                    cutW = displayToM(cwFt, cwIn);
+                    cutH = displayToM(chFt, chIn);
+                } else {
+                    cutW = parseFloat(lRow.querySelector('.cut-w')?.value || 0);
+                    cutH = parseFloat(lRow.querySelector('.cut-h')?.value || 0);
+                }
+            }
+        }
+
+        rows.push({ room, length, width, lShaped, cutCorner, cutW, cutH });
+    });
+    return rows;
+}
+
+function renderRows(rows) {
+    document.getElementById('room-tbody').innerHTML = '';
+    rows.forEach(r => addRow(r.room, r.length, r.width, r.lShaped, r.cutCorner, r.cutW, r.cutH));
+}
+
+
+// ── Init defaults ──
+function init() {
+    DEFAULT_ROOMS.forEach(r => addRow(r.room, r.length, r.width, r.lShaped, r.cutCorner, r.cutW, r.cutH));
+}
+
+// ── Bin-packing (strip-based for roll width) ──
+function generate() {
+    const rooms = readAllRows().filter(r => r.length > 0 && r.width > 0);
+    if (rooms.length === 0) return;
+
+    // Build pieces list — L-shapes use full bounding rectangle (single piece of carpet)
+    const pieces = [];
+    let colorIdx = 0;
+    rooms.forEach(r => {
+        const color = COLORS[colorIdx % COLORS.length];
+        colorIdx++;
+
+        const p = {
+            name: r.room,
+            w: r.width * SAFETY_FACTOR,
+            h: r.length * SAFETY_FACTOR,
+            origW: r.width,
+            origH: r.length,
+            color: color
+        };
+
+        // Attach L-shape cutout info so we can draw it as waste on the canvas
+        if (r.lShaped && r.cutW > 0 && r.cutH > 0) {
+            p.lShaped = true;
+            p.cutCorner = r.cutCorner;
+            p.cutW = Math.min(r.cutW, r.width - 0.01) * SAFETY_FACTOR;
+            p.cutH = Math.min(r.cutH, r.length - 0.01) * SAFETY_FACTOR;
+            p.origCutW = Math.min(r.cutW, r.width - 0.01);
+            p.origCutH = Math.min(r.cutH, r.length - 0.01);
+            // Actual room area excludes the cutout
+            p.roomArea = r.width * r.length - r.cutW * r.cutH;
+        }
+
+        pieces.push(p);
+    });
+
+    const rollWidthM = parseFloat(document.getElementById('roll-width').value);
+    const hasRoll = rollWidthM > 0;
+    const maxWidth = hasRoll ? rollWidthM : Infinity;
+
+    // Orient pieces to fit within roll width
+    pieces.forEach(p => {
+        if (hasRoll) {
+            const fits_normal = p.w <= maxWidth;
+            const fits_rotated = p.h <= maxWidth;
+            if (fits_normal && fits_rotated) {
+                if (p.h < p.w) { const t = p.w; p.w = p.h; p.h = t; }
+            } else if (!fits_normal && fits_rotated) {
+                const t = p.w; p.w = p.h; p.h = t;
+            }
+        }
+    });
+
+    // Sort by height descending
+    pieces.sort((a, b) => b.h - a.h);
+
+    // Shelf Next Fit Decreasing Height
+    const placed = [];
+    let shelfY = 0, shelfH = 0, cursorX = 0;
+
+    pieces.forEach(p => {
+        if (cursorX + p.w <= maxWidth + 0.001) {
+            p.x = cursorX;
+            p.y = shelfY;
+            cursorX += p.w;
+            if (p.h > shelfH) shelfH = p.h;
+        } else {
+            shelfY += shelfH;
+            shelfH = p.h;
+            cursorX = p.w;
+            p.x = 0;
+            p.y = shelfY;
+        }
+        placed.push(p);
+    });
+
+    const totalRollLength = shelfY + shelfH;
+    const usedWidth = hasRoll ? maxWidth : Math.max(...placed.map(p => p.x + p.w));
+
+    const totalRoomArea = placed.reduce((s, p) => s + (p.roomArea || p.origW * p.origH), 0);
+    const totalCarpetArea = placed.reduce((s, p) => s + p.w * p.h, 0);
+    const cutoutWaste = placed.reduce((s, p) => s + (p.lShaped ? p.cutW * p.cutH : 0), 0);
+    const rollArea = usedWidth * totalRollLength;
+    const wasteArea = rollArea - totalCarpetArea + cutoutWaste;
+    const wastePct = (wasteArea / rollArea * 100).toFixed(1);
+
+    // Summary
+    const summary = document.getElementById('summary');
+    let roomListHtml = placed.map(p => {
+        const lBadge = p.lShaped ? ' <span class="badge bg-secondary" style="font-size:0.65rem;">L</span>' : '';
+        return `<span class="room-color-swatch" style="background:${p.color}"></span>${p.name}${lBadge}: ${formatDim(p.origH)} x ${formatDim(p.origW)}`;
+    }).join('<br>');
+
+    summary.innerHTML = `
+        <div class="row">
+            <div class="col-sm-6">
+                <strong><i class="fa-solid fa-door-open me-1"></i>Pieces (${placed.length})</strong><br>
+                <small>${roomListHtml}</small>
+            </div>
+            <div class="col-sm-6">
+                <strong><i class="fa-solid fa-scroll me-1"></i>Roll</strong><br>
+                <small>
+                    Width: ${hasRoll ? formatDim(maxWidth) : 'N/A'}<br>
+                    Length needed: ${formatDim(totalRollLength)}<br>
+                    Total carpet area: ${totalCarpetArea.toFixed(2)} m&sup2; (incl 5%)<br>
+                    Roll area used: ${rollArea.toFixed(2)} m&sup2;<br>
+                    Waste: ${wasteArea.toFixed(2)} m&sup2; (${wastePct}%)
+                </small>
+            </div>
+        </div>`;
+
+    document.getElementById('output-area').style.display = 'block';
+    document.getElementById('placeholder').style.display = 'none';
+
+    drawLayout(placed, usedWidth, totalRollLength, hasRoll, maxWidth);
+}
+
+function drawLayout(pieces, usedWidth, totalLength, hasRoll, maxWidth) {
+    const canvas = document.getElementById('carpet-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const container = document.getElementById('canvas-container');
+    const availW = Math.max(container.clientWidth - 60, 300);
+    const availH = 700;
+    const drawWidth = hasRoll ? maxWidth : usedWidth;
+
+    const scaleX = availW / drawWidth;
+    const scaleY = availH / totalLength;
+    const scale = Math.min(scaleX, scaleY, 150);
+
+    const ML = 50, MT = 40, MR = 20, MB = 20;
+
+    canvas.width = drawWidth * scale + ML + MR;
+    canvas.height = totalLength * scale + MT + MB;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Roll outline
+    if (hasRoll) {
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 4]);
+        ctx.strokeRect(ML, MT, maxWidth * scale, totalLength * scale);
+        ctx.setLineDash([]);
+    }
+
+    // Draw pieces
+    pieces.forEach(p => {
+        const x = ML + p.x * scale;
+        const y = MT + p.y * scale;
+        const w = p.w * scale;
+        const h = p.h * scale;
+
+        // Fill full bounding rectangle
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(x, y, w, h);
+        ctx.globalAlpha = 1;
+
+        // If L-shaped, draw the cutout corner with hatching to show waste
+        if (p.lShaped) {
+            const cw = p.cutW * scale;
+            const ch = p.cutH * scale;
+            let cx, cy;
+            switch(p.cutCorner) {
+                case 'tl': cx = x;          cy = y;          break;
+                case 'tr': cx = x + w - cw; cy = y;          break;
+                case 'bl': cx = x;          cy = y + h - ch; break;
+                case 'br': cx = x + w - cw; cy = y + h - ch; break;
+            }
+
+            // White out the cutout area
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(cx, cy, cw, ch);
+
+            // Hatching lines over the cutout
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cx, cy, cw, ch);
+            ctx.clip();
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            const step = 8;
+            for (let i = -Math.max(cw, ch); i < Math.max(cw, ch) * 2; i += step) {
+                ctx.beginPath();
+                ctx.moveTo(cx + i, cy);
+                ctx.lineTo(cx + i + Math.max(cw, ch), cy + Math.max(cw, ch));
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Cutout border (dashed)
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 3]);
+            ctx.strokeRect(cx, cy, cw, ch);
+            ctx.setLineDash([]);
+
+            // "waste" label in cutout if big enough
+            if (cw > 35 && ch > 18) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = `${Math.max(8, Math.min(11, Math.min(cw, ch) * 0.2))}px Segoe UI, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('cut off', cx + cw / 2, cy + ch / 2);
+            }
+        }
+
+        // Border of full piece
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+
+        // Labels — position in the centre of the L-shape usable area, not the bounding box
+        let labelX = x + w / 2;
+        let labelY = y + h / 2;
+        if (p.lShaped) {
+            const cw = p.cutW * scale;
+            const ch = p.cutH * scale;
+            // Shift label away from cutout corner
+            if (p.cutCorner === 'tl' || p.cutCorner === 'tr') {
+                labelY = y + ch + (h - ch) / 2;
+            } else {
+                labelY = y + (h - ch) / 2;
+            }
+        }
+
+        ctx.fillStyle = '#1e293b';
+        const fontSize = Math.max(9, Math.min(16, Math.min(w, h) * 0.18));
+        ctx.font = `bold ${fontSize}px Segoe UI, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const dimLabel = `${formatDim(p.origH)} x ${formatDim(p.origW)}`;
+        const lLabel = p.lShaped ? ' (L)' : '';
+
+        if (w > 40 && h > 25) {
+            ctx.fillText(p.name + lLabel, labelX, labelY - fontSize * 0.7);
+            ctx.font = `${Math.max(8, fontSize * 0.7)}px Segoe UI, sans-serif`;
+            ctx.fillStyle = '#475569';
+            ctx.fillText(dimLabel, labelX, labelY + fontSize * 0.7);
+        } else if (w > 20 && h > 15) {
+            ctx.font = `bold ${Math.max(8, fontSize * 0.7)}px Segoe UI, sans-serif`;
+            ctx.fillText(p.name, labelX, labelY);
+        }
+    });
+
+    // Roll width label
+    if (hasRoll) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 12px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Roll width: ${formatDim(maxWidth)}`, ML + maxWidth * scale / 2, MT - 12);
+    }
+
+    // Length label
+    ctx.save();
+    ctx.translate(16, MT + totalLength * scale / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Length: ${formatDim(totalLength)}`, 0, 0);
+    ctx.restore();
+}
+
+// ── Boot ──
+init();
+</script>
+</body>
+</html>
